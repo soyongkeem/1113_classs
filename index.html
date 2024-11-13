@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D 지구본 테스트</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+    body { margin: 0; overflow: hidden; }
+    #youtubePlayer {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        width: 560px;
+        height: 315px;
+        display: none;
+        z-index: 1;
+    }
+    #labels {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        padding: 10px;
+        color: rgb(255, 255, 255);
+        font-size: 20px;
+        font-family: Arial, sans-serif;
+        line-height: 1.5;
+        z-index: 2;
+    }
+    .label {
+        cursor: pointer;
+        margin-bottom: 5px;
+        color: rgb(255, 255, 255);
+    }
+    .label.active {
+        color: red;
+    }
+    #description {
+        position: absolute;
+        top: 330px; /* Just below the YouTube player */
+        left: 10px;
+        width: 560px;
+        padding: 10px;
+        color: rgb(255, 255, 255);
+        font-size: 18px;
+        font-family: Arial, sans-serif;
+        z-index: 2;
+        line-height: 1.6;
+        display: none;
+    }
+    #pressText {
+        position: absolute;
+        bottom: 20px;
+        left: 20px;
+        color: red;
+        font-size: 20px;
+        font-family: Arial, sans-serif;
+        z-index: 2;
+    }
+</style>
+</head>
+<body>
+<div id="youtubePlayer"></div>
+<div id="labels">
+    <div class="label"><strong>Press the red dot</strong></div>
+    <div class="label" id="label-dot1" onclick="highlightDot('dot1')">Dot1: Republic of Korea</div>
+    <div class="label" id="label-dot2" onclick="highlightDot('dot2')">Dot2: Japan</div>
+    <div class="label" id="label-dot3" onclick="highlightDot('dot3')">Dot3: Italy</div>
+    <div class="label" id="label-dot4" onclick="highlightDot('dot4')">Dot4: United States</div>
+</div>
+<div id="description"></div>
+<div id="pressText"></div>
+
+<script>
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// 조명 설정
+const ambientLight = new THREE.AmbientLight(0xffffff, 1);
+scene.add(ambientLight);
+
+const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+directionalLight.position.set(5, 3, 5);
+scene.add(directionalLight);
+
+// 텍스처 로딩
+const textureLoader = new THREE.TextureLoader();
+const globeGeometry = new THREE.SphereGeometry(5, 32, 32);
+let globe;
+
+textureLoader.load(
+    'https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Blue_Marble_2002.png/4096px-Blue_Marble_2002.png',
+    function(texture) {
+        const globeMaterial = new THREE.MeshPhongMaterial({ map: texture });
+        globe = new THREE.Mesh(globeGeometry, globeMaterial);
+        scene.add(globe);
+
+        const latitude1 = 37;
+        const longitude1 = 233;
+        addRedCircleOnGlobe(latitude1, longitude1, "dot1");
+
+        const latitude2 = 35;
+        const longitude2 = 225;
+        addRedCircleOnGlobe(latitude2, longitude2, "dot2");
+
+        const latitude3 = 39;
+        const longitude3 = 344;
+        addRedCircleOnGlobe(latitude3, longitude3, "dot3");
+
+        const latitude4 = 37;
+        const longitude4 = 78;
+        addRedCircleOnGlobe(latitude4, longitude4, "dot4");
+    },
+);
+
+camera.position.z = 15;
+
+// 빨간 원을 지구본 표면에 고정시키는 함수
+function addRedCircleOnGlobe(latitude, longitude, name) {
+    const radius = 5.05;
+    const lat = THREE.Math.degToRad(latitude);
+    const lon = THREE.Math.degToRad(longitude);
+
+    const x = radius * Math.cos(lat) * Math.cos(lon);
+    const y = radius * Math.sin(lat);
+    const z = radius * Math.cos(lat) * Math.sin(lon);
+
+    const circleGeometry = new THREE.CircleGeometry(0.05, 16);
+    const circleMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, side: THREE.DoubleSide });
+    const circle = new THREE.Mesh(circleGeometry, circleMaterial);
+
+    circle.position.set(x, y, z);
+    circle.lookAt(0, 0, 0);
+
+    globe.add(circle);
+    circle.userData = { isClickable: true, name: name };
+}
+
+// Dot 강조 기능
+function highlightDot(dotName) {
+    // 모든 라벨을 초기화
+    document.querySelectorAll('.label').forEach(label => {
+        label.classList.remove('active');
+    });
+    // 클릭된 라벨만 강조
+    document.getElementById(`label-${dotName}`).classList.add('active');
+
+    // 설명 업데이트
+    updateDescription(dotName);
+}
+
+// 설명 업데이트 함수
+function updateDescription(dotName) {
+    const description = document.getElementById("description");
+
+    if (dotName === "dot1") {
+        description.innerHTML = "<strong>붉은 노을, 이문세, 1988</strong><br>붉은 노을은 1988년에 발매된 이문세의 곡으로, 팝 발라드 장르의 곡이다. 이 곡은 이영훈이 작사하고 작곡한 작품으로 사랑과 이별을 다룬 감성적인 가사와 경쾌한 멜로디로 많은 사람들에게 사랑을 받았다. 이후 신화, M.C. The Max, 빅뱅 등 다양한 가수들에 의해 리메이크되기도 했다. 붉은 노을의 가수가 누구냐에 대한 답변에 따라 세대를 알아볼 수 있다는 이야기가 있을 정도로, 한국 음악 역사에서 중요한 위치를 차지하는 곡이라고 할 수 있다.";
+    } else if (dotName === "dot2") {
+        description.innerHTML = "<strong>푸른산호초, 마츠다 세이코, 1980</strong><br>푸른산호초는 1980년에 발매된 마츠다 세이코의 곡으로, 사랑과 자연을 테마로 한 서정적인 노래이다. 바다와 산호초를 상징으로 청춘의 사랑과 그리움을 표현하며 일본에서 큰 인기를 끌었다. 이 곡은 마츠다 세이코의 대표적인 히트곡 중 하나로 여름 시즌과 관련된 곡으로 자주 회자된다.2024년 여름, 뉴진스의 하니가 이 곡을 커버하여 화재가 되기도 했다.;"
+    } else if (dotName === "dot3") {
+        description.innerHTML = "<strong>Volare (Nel blu, dipinto di blu), Domenico Modugno, 1958</strong><br>Volare (Nel blu, dipinto di blu)원래 제목은 Nel blu, dipinto di blu이며, 미국에서는 Volare라는 제목으로 발매되어 큰 인기를 끌었다. 이 곡은 외국어로 된 곡 중 최초로 빌보드 핫 100에서 1위를 기록한 곡이며, 1958년에는 연말 차트에서도 1위를 차지했다. 곡은 5주 동안 1위를 기록하며 큰 인기를 끌었고, 유로비전 송 콘테스트에서 3위를 기록하기도 했다. 많은 가수들에 의해 커버되었으며, 특히 바비 라이델과 집시 킹즈의 버전이 유명하다. 1958년부터 2018년까지의 빌보드 핫 100 올타임 차트에서는 167위에 올랐다";
+    } else if (dotName === "dot4") {
+        description.innerHTML = "<strong>Jailhouse Rock, Elvis Presley, 1957</strong><br>이 곡은 감옥에서 수감자들이 춤을 추며 즐기는 모습을 그린 내용으로, 미국 내에서 큰 인기를 끌었다. 발표 직후 빌보드 차트에서 1위를 기록하며 엘비스 프레슬리의 경력을 더욱 확립했다. Jailhouse Rock은 락앤롤 음악의 대표적인 예로, 당시 미국의 청소년들 사이에서 폭발적인 반응을 얻었다. 이 곡은 미국 내에서 클래식으로 남아 있으며 엘비스 프레슬리의 음악적 영향력을 강화하는 중요한 곡이 되었다.";
+    }
+
+    description.style.display = "block"; // 설명을 표시
+}
+
+// 마우스 이벤트 설정
+renderer.domElement.addEventListener('mousemove', onDocumentMouseMove, false);
+renderer.domElement.addEventListener('click', onDocumentMouseClick, false);
+
+function onDocumentMouseMove(event) {
+    const mouse = new THREE.Vector2();
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(mouse, camera);
+
+    const intersects = raycaster.intersectObjects(scene.children, true);
+    const isHoveringClickable = intersects.some(intersect => intersect.object.userData.isClickable);
+
+    document.body.style.cursor = isHoveringClickable ? 'pointer' : 'auto'; // 커서 변경
+}
+
+function onDocumentMouseClick(event) {
+    const mouse = new THREE.Vector2();
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(mouse, camera);
+    
+    const intersects = raycaster.intersectObjects(scene.children, true);
+    intersects.forEach(intersect => {
+        if (intersect.object.userData.isClickable) {
+            highlightDot(intersect.object.userData.name);
+            if (intersect.object.userData.name === "dot1") {
+                playYouTubeVideo("Dvh4w3I5d6o", 165, 251); // dot1 영상
+            }
+            else if (intersect.object.userData.name === "dot2") {
+                playYouTubeVideo("qn7_XMbbNH8", 10, 42); // dot2 영상
+            }
+            else if (intersect.object.userData.name === "dot3") {
+                playYouTubeVideo("M5qQETERo70", 87, 111); // dot3 영상
+            }
+            else if (intersect.object.userData.name === "dot4") {
+                playYouTubeVideo("i1pAktvp4Lo", 75, 91); // dot4 영상
+            }
+        }
+    });
+}
+
+// YouTube 동영상 재생 함수
+function playYouTubeVideo(videoId, start, end) {
+    const youtubePlayer = document.getElementById("youtubePlayer");
+    const player = document.createElement('iframe');
+    player.width = "560";
+    player.height = "315";
+    player.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&showinfo=0&start=${start}&end=${end}`;
+    player.frameBorder = "0";
+    player.allow = "autoplay; encrypted-media";
+    player.allowFullscreen = true;
+    youtubePlayer.innerHTML = ''; // 이전 iframe 제거
+    youtubePlayer.appendChild(player);
+    youtubePlayer.style.display = "block";
+}
+
+// 마우스 컨트롤
+let isDragging = false;
+let previousMousePosition = { x: 0, y: 0 };
+
+document.addEventListener('mousedown', function() { isDragging = true; }, false);
+document.addEventListener('mousemove', function(event) {
+    if (isDragging && globe) {
+        const deltaX = event.clientX - previousMousePosition.x;
+        const deltaY = event.clientY - previousMousePosition.y;
+        globe.rotation.y += deltaX * 0.005;
+        globe.rotation.x += deltaY * 0.005;
+    }
+    previousMousePosition = { x: event.clientX, y: event.clientY };
+}, false);
+document.addEventListener('mouseup', function() { isDragging = false; }, false);
+
+document.addEventListener('wheel', function(event) {
+    const zoomSpeed = 0.05;
+    const minZoom = 8;
+    const maxZoom = 25;
+
+    camera.position.z += event.deltaY * zoomSpeed;
+    camera.position.z = Math.max(minZoom, Math.min(camera.position.z, maxZoom));
+}, false);
+
+function animate() {
+    requestAnimationFrame(animate);
+    if (globe && !isDragging) {
+        globe.rotation.y += 0.001;
+    }
+    renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', function() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}, false);
+</script>
+</body>
+</html>
